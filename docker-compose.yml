@@ -1,0 +1,74 @@
+services:
+
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: juice-shop
+    restart: unless-stopped
+    networks:
+     - backend
+
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: dvwa-lab
+    restart: unless-stopped
+    networks:
+      - backend
+
+  caddy:
+    build: .
+    container_name: caddy-waf
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 5s
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/crs-setup.conf:/etc/caddy/crs-setup.conf
+    depends_on:
+      - juice-shop
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-batch-size: "400"
+        loki-batch-wait: "100ms"
+
+  loki:
+    image: grafana/loki:3.7.0
+    container_name: loki-server
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - loki
+    networks:
+      - monitoring
+      - frontend
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+  monitoring:
+    driver: bridge
