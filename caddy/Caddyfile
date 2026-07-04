@@ -1,0 +1,96 @@
+{
+    order coraza_waf first
+}
+
+# BLOCK 1: Configuración para DVWA
+(seguridad_dvwa) {
+    rate_limit {
+        zone limite_dvwa {
+            key {remote_host}
+            events 300
+            window 1m
+        }
+    }
+
+    coraza_waf {
+        load_owasp_crs
+        directives `  
+            Include @coraza.conf-recommended
+
+            SecRuleEngine On
+            SecRequestBodyAccess On
+            SecResponseBodyAccess On
+
+            Include /etc/caddy/crs-setup.conf
+            Include @owasp_crs/*.conf
+            
+            # ========================================================
+            # REGLAS ESPECIFICAS - DVWA (PHP)
+            # ========================================================
+
+            # REGLA 1: ANTI-SQL INJECTION
+            SecRule ARGS|REQUEST_URI "(?i)('|--|#|/\*|\*/|\b(select|union|insert|update|delete|drop)\b)" \
+                "id:100001,phase:2,deny,log,status:403,t:none,t:urlDecode,t:lowercase,msg:'SQL Injection detectado en DVWA',severity:CRITICAL"
+
+            # REGLA 2: ANTI-XSS Y HTML INJECTION GLOBAL
+            SecRule ARGS|REQUEST_URI|REQUEST_COOKIES|REQUEST_HEADERS "(?i)(<|%3c)[a-zA-Z0-9/%!]+" \
+                "id:100002,phase:2,deny,log,status:403,t:none,t:urlDecode,msg:'Ataque XSS o Inyeccion HTML detectado',severity:CRITICAL"
+
+            # REGLA 3: VALIDACIÓN ESTRICTA DE LA COOKIE DE SEGURIDAD
+            SecRule REQUEST_COOKIES:security "!@rx ^(low|medium|high|impossible)$" \
+                "id:100009,phase:2,deny,log,status:403,msg:'Valor no permitido en cookie security - Bypass Anulado',severity:CRITICAL"
+        `
+    }
+}
+
+# BLOCK 2: Configuración para OWASP Juice Shop
+(seguridad_jshop) {
+    rate_limit {
+        zone limite_jshop {
+            key {remote_host}
+            events 300
+            window 1m
+        }
+    }
+
+    coraza_waf {
+        load_owasp_crs
+        directives `  
+            Include @coraza.conf-recommended
+
+            SecRuleEngine On
+            SecRequestBodyAccess On
+            SecResponseBodyAccess On
+
+            Include /etc/caddy/crs-setup.conf
+            Include @owasp_crs/*.conf
+		
+        `
+    }
+}
+
+# Sitio 1: OWASP Juice Shop
+jshop.local {
+    tls internal
+    
+    handle /socket.io/* {
+        reverse_proxy juice-shop:3000
+    }
+    
+    handle {
+        route {
+            import seguridad_jshop
+        }
+        reverse_proxy juice-shop:3000
+    }
+}
+
+# Sitio 2: DVWA
+dvwa.local {
+    tls internal
+    
+    route {
+        import seguridad_dvwa
+    }
+    reverse_proxy dvwa-lab:80
+}
