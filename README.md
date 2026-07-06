@@ -6,7 +6,7 @@
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 
 ## Resumen del Proyecto
-Despliegue de una arquitectura de ciberseguridad defensiva bajo un enfoque DevSecOps, utilizando un Firewall de Aplicaciones Web (WAF) contenerizado para proteger infraestructuras híbridas. La solución se enfoca en la detección, registro y bloqueo automatizado del 100% de los ataques más críticos definidos en el OWASP Top 10.
+Despliegue de una arquitectura de ciberseguridad defensiva bajo un enfoque defesnvo, utilizando un Firewall de Aplicaciones Web (WAF) contenerizado para proteger infraestructuras híbridas. La solución se enfoca en la detección, registro y bloqueo automatizado del 100% de los ataques más críticos definidos en el OWASP Top 10.
 
 El entorno fue implementado sobre Ubuntu Server 24.04 LTS y orquestado con Docker Compose, aplicando un endurecimiento (*hardening*) estricto de los contenedores y segmentando la red para cumplir con el principio de mínimo privilegio.
 
